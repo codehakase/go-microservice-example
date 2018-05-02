@@ -8,12 +8,11 @@ import (
 	"os"
 
 	pb "github.com/codehakase/go-microservice-example/consignment-srv/proto/consignment"
-
-	"google.golang.org/grpc"
+	microclient "github.com/micro/go-micro/client"
+	"github.com/micro/go-micro/cmd"
 )
 
 const (
-	address         = "localhost:50051"
 	defaultFilename = "consignment.json"
 )
 
@@ -29,12 +28,8 @@ func parseFile(file string) (*pb.Consignment, error) {
 
 func main() {
 	// setup connection
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("could not setup connection: %v", err)
-	}
-	defer conn.Close()
-	client := pb.NewShippingServiceClient(conn)
+	cmd.Init()
+	client := pb.NewShippingServiceClient("go.micro.srv.consignment", microclient.DefaultClient)
 	// contact server and print out its response
 	file := defaultFilename
 	if len(os.Args) > 1 {
@@ -44,7 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not parse file: %v", err)
 	}
-	r, err := client.CreateConsignment(context.Background(), consignment)
+	r, err := client.CreateConsignment(context.TODO(), consignment)
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
