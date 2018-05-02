@@ -7,4 +7,4 @@ build:
 run:
 	docker run -p 50051:50051 consignment-srv \
 		-e MICRO_SERVER_ADDRESS=:50051 \
-		-e MICRO_REGISTRY=mds consignment-srv
+		-e MICRO_REGISTRY=mdns consignment-srv
