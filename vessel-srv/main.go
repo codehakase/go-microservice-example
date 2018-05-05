@@ -1,55 +1,32 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
+	"log"
+	"os"
 
 	pb "github.com/codehakase/go-microservice-example/vessel-srv/proto/vessel"
 	micro "github.com/micro/go-micro"
 )
 
-type Repository interface {
-	FindAvailable(*pb.Specification) (*pb.Vessel, error)
-}
-
-type VesselRepository struct {
-	vessels []*pb.Vessel
-}
-
-// service is the grpc service handler
-type service struct {
-	repo Repository
-}
-
-// FindAvailable checks a specification against a list of vessels
-// if capacity and max weight are below a vessel's capacity and max weight
-// return that vessel
-func (repo *VesselRepository) FindAvailable(spec *pb.Specification) (*pb.Vessel, error) {
-	for _, vessel := range repo.vessels {
-		if spec.Capacity <= vessel.Capacity && spec.MaxWeight <= vessel.MaxWeight {
-			return vessel, nil
-		}
-	}
-	return nil, errors.New("No vessel found by that spec")
-}
-
-func (s *service) FindAvailable(ctx context.Context, req *pb.Specification, res *pb.Response) error {
-	// Find the next available vessel
-	vessel, err := s.repo.FindAvailable(req)
-	if err != nil {
-		return err
-	}
-	// set vessel as part of response
-	res.Vessel = vessel
-	return nil
-}
+const (
+	defaultHost = "localhost:27017"
+)
 
 func main() {
-	vessels := []*pb.Vessel{
-		&pb.Vessel{Id: "vessel001", Name: "Boaty McBoat", MaxWeight: 200000, Capacity: 500},
+	host := os.Getenv("DB_HOST")
+	if host == "" {
+		host = defaultHost
 	}
-	repo := &VesselRepository{vessels}
+	session, err := CreateSession(host)
+	if err != nil {
+		log.Fatalf("could not connect to datastore %s,: %v", host, err)
+	}
+	defer session.Close()
+
+	repo := &VesselRepository{session.Copy()}
+
+	createDummyData(repo)
 
 	srv := micro.NewService(
 		micro.Name("go.micro.srv.vessel"),
@@ -59,9 +36,19 @@ func main() {
 	srv.Init()
 
 	// Register implementation
-	pb.RegisterVesselServiceHandler(srv.Server(), &service{repo})
+	pb.RegisterVesselServiceHandler(srv.Server(), &service{session})
 
 	if err := srv.Run(); err != nil {
 		fmt.Println(err)
+	}
+}
+
+func createDummyData(repo Repository) {
+	defer repo.Close()
+	vessels := []*pb.Vessel{
+		{Id: "vessel001", Name: "Kane's Salty Secret", MaxWeight: 200000, Capacity: 500},
+	}
+	for _, v := range vessels {
+		repo.Create(v)
 	}
 }
