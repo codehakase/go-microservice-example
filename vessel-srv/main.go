@@ -41,7 +41,7 @@ func (s *service) FindAvailable(ctx context.Context, req *pb.Specification, res 
 		return err
 	}
 	// set vessel as part of response
-	res.vessel = vessel
+	res.Vessel = vessel
 	return nil
 }
 

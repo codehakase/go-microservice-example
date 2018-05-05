@@ -48,6 +48,7 @@ func (s *service) CreateConsignment(ctx context.Context, req *pb.Consignment, re
 		Capacity:  int32(len(req.Containers)),
 	})
 	if err != nil {
+		log.Printf("could not find consignment: %v", err)
 		return err
 	}
 	log.Printf("Found vessel: %s \n", vesselResponse.Vessel.Name)
